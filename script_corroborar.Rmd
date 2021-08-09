@@ -63,7 +63,7 @@ names(filtRs) <- sample.names
 
 
 ```{r}
-out1 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(150,140), #first is the path of the forward fastq file, 
+out6 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(225,200), #first is the path of the forward fastq file, 
                                                                       #then the path for the filtered filed; then same but with reverse strand
                                                    #the argument trunclen sets a threshold for the length of each of the strains' reads length
               maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE, #maxN: after being truncated, any sequences with a higher Ns than what it is stated
@@ -83,19 +83,25 @@ out1 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(150,140), #first is
 #out4<-the trims are on the 225,190
 #out5<-the trims are on the 250,200
 #out6<-the trims are on the 225,200
-head(out)
+
+#save(out1,file = "~/R/Corroborar_Roberto_1/out1.RData")
+#save(out2,file = "~/R/Corroborar_Roberto_1/out2.RData")
+#save(out3,file = "~/R/Corroborar_Roberto_1/out3.RData")
+#save(out4,file = "~/R/Corroborar_Roberto_1/out4.RData")
+#save(out5,file = "~/R/Corroborar_Roberto_1/out5.RData")
+#save(out6,file = "~/R/Corroborar_Roberto_1/out6.RData")
 ```
 
 
 ## Filtrado y tasas de error
 Will use the filtered files, meaning those that have already been cut in order for us to be content with the quality and are good enough for our work.
 ```{r}
-#errF <- learnErrors(filtFs, multithread=TRUE) didn't do it to save time, but this line is to make it
+#errF <- learnErrors(filtFs, multithread=TRUE) 
 load(file="errF.RData")
 #more or less will estimate via machine laerning what would be expected and the observed data, compares and calculates the error
 #Error rates are learned by alternating between sample inference and error rate estimation until convergence
 #output of this function serves as input to the dada function call as the err parameter.
-#save(errF,file="~/Dropbox/DADA2_Ejemplo_Clase/errF.RData")
+#save(errF,file="~/R/Corroborar_Roberto_1/errF.RData")
 ```
 
 
@@ -105,7 +111,7 @@ load("errR.RData")
 #more or less will estimate via machine laerning what would be expected and the observed data, compares and calculates the error
 #Error rates are learned by alternating between sample inference and error rate estimation until convergence
 #output of this function serves as input to the dada function call as the err parameter.
-#save(errR,file="~/Dropbox/DADA2_Ejemplo_Clase/errR.RData")
+#save(errR,file="~/R/Corroborar_Roberto_1/errR.RData")
 ```
 
 
@@ -120,20 +126,22 @@ plotErrors(errF, nominalQ=TRUE)
 
 
 ```{r}
-dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+#dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
 #this function will remove sequencing errors, that is why we calculated the error, and will reveal the composition of the community
-#save(dadaFs, file="~/Dropbox/DADA2_Ejemplo_Clase/dadaFs.RData")
+#save(dadaFs, file="~/R/Corroborar_Roberto_1/dadaFs.RData")
+load("dadaFs.RData")
 ```
 
 ```{r}
-dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
+#dadaRs <- dada(filtRs, err=errR, multithread=TRUE)
 #this function will remove sequencing errors, that is why we calculated the error, and will reveal the composition of the community
-#save(dadaRs, file="~/Dropbox/DADA2_Ejemplo_Clase/dadaRs.RData")
+#save(dadaRs, file="~/R/Corroborar_Roberto_1/dadaRs.RData")
+load("dadaRs.RData")
 ```
 
 
 ```{r}
-dadaFs[[1]]#an example of the data that is gathered when using the dada function, 128 sequence variants in this one, for example
+dadaFs[[1]]#an example of the data that is gathered when using the dada function
 ```
 
 
@@ -174,9 +182,13 @@ sum(seqtab.nochim)/sum(seqtab)#if done correctly, most of the sequences (almost 
 
 
 ```{r}
+#remeber here the "out" must me changed for every single one of the outs I had created
+
 getN <- function(x) sum(getUniques(x))#i gues this line will get the unique seuqences, meaning vectors from the objects, meaning the sequences.
-track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))#this should get us the reads and the unique sequences we had at the beginning and at each step; since it looks like it hasn't dropped o much, it is fine
+
+track <- cbind(out1, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))#this should get us the reads and the unique sequences we had at the beginning and at each step; since it looks like it hasn't dropped o much, it is fine
 # If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
+
 colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 rownames(track) <- sample.names
 head(track)
@@ -191,10 +203,10 @@ Estos dos procesos pueden tardar mucho, cuidado
 
 
 ```{r}
-taxa <- assignTaxonomy(seqtab.nochim,"~/R/Genomica_funcional/DADA2_Ejemplo_Clase/tax/silva_nr_v132_train_set.fa.gz", multithread=T) #it could be done, and tried to load it, but it just wouldn't find the file even though files from thesame file had been loaded in the same fashion
+taxa <- assignTaxonomy(seqtab.nochim,"~/R/Corroborar_Roberto_1/tax/silva_nr_v132_train_set.fa.gz", multithread=T) #it could be done, and tried to load it, but it just wouldn't find the file even though files from thesame file had been loaded in the same fashion
 #apparently, this function starts assigning the taxonomy to to the sequence variants given the amplicon used and a series of training sequences with known taxonomy so that it may assign correctly the sequences that we gave
 #save(taxa,file="~/Dropbox/DADA2_Ejemplo_Clase/taxa1.RData")
-load("~/R/Genomica_funcional/DADA2_Ejemplo_Clase/taxa1.RData")
+#load("~/R/Genomica_funcional/DADA2_Ejemplo_Clase/taxa1.RData")
 ```
 
 
