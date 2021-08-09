@@ -63,16 +63,16 @@ names(filtRs) <- sample.names
 
 
 ```{r}
-out6 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(225,200), #first is the path of the forward fastq file, 
+#out6 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(225,200), #first is the path of the forward fastq file, 
                                                                       #then the path for the filtered filed; then same but with reverse strand
                                                    #the argument trunclen sets a threshold for the length of each of the strains' reads length
-              maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE, #maxN: after being truncated, any sequences with a higher Ns than what it is stated
+#              maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE, #maxN: after being truncated, any sequences with a higher Ns than what it is stated
                                                             #won't be used
                                                             #maxEE: after truncation, reads with higher than maxEE "expected errors" will be discarded
                                                             #truncQ: Truncate reads at the first instance of a quality 
                                                             #score less than or equal to truncQ.
                                                             #rm.phix:  discard reads that match against the phiX genome, as determined by isPhiX if T
-              compress=TRUE, multithread=F) # On Windows set multithread=FALSE
+#              compress=TRUE, multithread=F) # On Windows set multithread=FALSE
                                             #compress: the output fastq file(s) are gzipped if it is True
 #the output of the function above has an output of fastq file(s) (compressed by default) containing those trimmed reads which passed the filters
 #CHECK THE DOCUMENTATION 
@@ -90,6 +90,13 @@ out6 <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(225,200), #first is
 #save(out4,file = "~/R/Corroborar_Roberto_1/out4.RData")
 #save(out5,file = "~/R/Corroborar_Roberto_1/out5.RData")
 #save(out6,file = "~/R/Corroborar_Roberto_1/out6.RData")
+
+load(file = "~/R/Corroborar_Roberto_1/out1.RData")
+load(file = "~/R/Corroborar_Roberto_1/out2.RData")
+load(file = "~/R/Corroborar_Roberto_1/out3.RData")
+load(file = "~/R/Corroborar_Roberto_1/out4.RData")
+load(file = "~/R/Corroborar_Roberto_1/out5.RData")
+load(file = "~/R/Corroborar_Roberto_1/out6.RData")
 ```
 
 
@@ -161,7 +168,7 @@ head(mergers[[1]])
 
 ```{r}
 seqtab <- makeSequenceTable(mergers)#This function constructs a sequence table (analogous to an OTU table) from the provided list of samples.
-dim(seqtab)#there were 20 total mergers since there were 20 fastq files for reverse and 20 for forward each amounts for 293 sequences
+dim(seqtab)
 ```
 
 
@@ -170,7 +177,7 @@ dim(seqtab)#there were 20 total mergers since there were 20 fastq files for reve
 
 ```{r}
 seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)#after denoising, the chimeras are left and can be identfified so that they can be removed, for example, with this funcion. The chimeras are 2 sequences that were incorrectly joined together. The method makes it so that only thetable that is provided wil be affected
-dim(seqtab.nochim)#there were 20 total mergers since there were 20 fastq files for reverse and 20 for forward, each amounts for 232 sequences
+dim(seqtab.nochim)
 ```
 
 ```{r}
@@ -182,11 +189,11 @@ sum(seqtab.nochim)/sum(seqtab)#if done correctly, most of the sequences (almost 
 
 
 ```{r}
-#remeber here the "out" must me changed for every single one of the outs I had created
+#***********remeber here the "out" must me changed for every single one of the outs I had created**************
 
 getN <- function(x) sum(getUniques(x))#i gues this line will get the unique seuqences, meaning vectors from the objects, meaning the sequences.
 
-track <- cbind(out1, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))#this should get us the reads and the unique sequences we had at the beginning and at each step; since it looks like it hasn't dropped o much, it is fine
+track <- cbind(out4, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))#this should get us the reads and the unique sequences we had at the beginning and at each step; since it looks like it hasn't dropped o much, it is fine
 # If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
 
 colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
@@ -203,70 +210,48 @@ Estos dos procesos pueden tardar mucho, cuidado
 
 
 ```{r}
-taxa <- assignTaxonomy(seqtab.nochim,"~/R/Corroborar_Roberto_1/tax/silva_nr_v132_train_set.fa.gz", multithread=T) #it could be done, and tried to load it, but it just wouldn't find the file even though files from thesame file had been loaded in the same fashion
+taxa_out3 <- assignTaxonomy(seqtab.nochim,"~/R/Corroborar_Roberto_1/tax/silva_nr_v132_train_set.fa.gz", multithread=T) #it could be done, and tried to load it, but it just wouldn't find the file even though files from thesame file had been loaded in the same fashion
 #apparently, this function starts assigning the taxonomy to to the sequence variants given the amplicon used and a series of training sequences with known taxonomy so that it may assign correctly the sequences that we gave
-#save(taxa,file="~/Dropbox/DADA2_Ejemplo_Clase/taxa1.RData")
-#load("~/R/Genomica_funcional/DADA2_Ejemplo_Clase/taxa1.RData")
+
+#SAVES OF WITH DIFFERENT OUTS:
+
+#save(taxa_out1,file="~/R/Corroborar_Roberto_1/taxa_out1_1.RData")
+#save(taxa_out2,file="~/R/Corroborar_Roberto_1/taxa_out2_1.RData")
+save(taxa_out3,file="~/R/Corroborar_Roberto_1/taxa_out3_1.RData")
+#save(taxa_out4,file="~/R/Corroborar_Roberto_1/taxa_out4_1.RData")
+#save(taxa_out5,file="~/R/Corroborar_Roberto_1/taxa_out5_1.RData")
+#save(taxa_out6,file="~/R/Corroborar_Roberto_1/taxa_out6_1.RData")
+
+
+
+#load("~/R/Corroborar_Roberto_1/taxa_out1_1.RData")
 ```
 
 
 ```{r}
-taxa <- addSpecies(taxa,"~/R/Genomica_funcional/DADA2_Ejemplo_Clase/tax/silva_species_assignment_v132.fa.gz")
+taxa_out3 <- addSpecies(taxa_out3,"~/R/Corroborar_Roberto_1/tax/silva_species_assignment_v132.fa.gz")
 #this part has the ability to assign the species to each sequence, but only f they are a perfect match and fulfill certain criteria like genera classification and the sort; for more info, check the documentation
-#save(taxa,file="~/Dropbox/DADA2_Ejemplo_Clase/taxa.RData")
-load("~/R/Genomica_funcional/DADA2_Ejemplo_Clase/taxa.RData")
+
+#SAVES OF WITH DIFFERENT OUTS:
+
+#save(taxa_out1,file="~/R/Corroborar_Roberto_1/taxa_out1_2.RData")
+#save(taxa_out2,file="~/R/Corroborar_Roberto_1/taxa_out2_2.RData")
+save(taxa_out3,file="~/R/Corroborar_Roberto_1/taxa_out3_2.RData")
+#save(taxa_out4,file="~/R/Corroborar_Roberto_1/taxa_out4_2.RData")
+#save(taxa_out5,file="~/R/Corroborar_Roberto_1/taxa_out5_2.RData")
+#save(taxa_out6,file="~/R/Corroborar_Roberto_1/taxa_out6_2.RData")
+
+
+
+
+#load("~/R/Corroborar_Roberto_1/taxa_out1_2.RData")
 ```
 
 ```{r}
-taxa.print <- taxa # Removing sequence rownames for display only
+taxa.print <- taxa_out3 # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL#the names were the full sequences, so not very helpful
 head(taxa.print)#now it says the taxonomy rather than the full sequence and the taxonomy
 ```
-
-### Alternativas (OPCIONAL)
-
-```{r}
-# Si no tienen instalado esta librería pueden hacerlo
-BiocManager::install("DECIPHER")
-library(DECIPHER); packageVersion("DECIPHER")
-```
-
-NO EJECUTAR SI NO TIENES BIEN INSTALADO DECIPHER
-
-```{r}
-dna <- DNAStringSet(getSequences(seqtab.nochim)) # Create a DNAStringSet from the ASVs
-load("~/R/Genomica_funcional/DADA2_Ejemplo_Clase/tax/IDTaxa/SILVA_SSU_r132_March2018.RData") # CHANGE TO THE PATH OF YOUR TRAINING SET, don't really know what i loaded
-ids <- IdTaxa(dna, trainingSet, strand="top", processors=NULL, verbose=FALSE) # use all processors, it is classifying the sequences into the taxonomic labels, has to work with string sequences, a trainingset to classify
-ranks <- c("domain", "phylum", "class", "order", "family", "genus", "species") # ranks of interest
-# Convert the output object of class "Taxa" to a matrix analogous to the output from assignTaxonomy
-taxid <- t(sapply(ids, function(x) {
-        m <- match(ranks, x$rank)
-        taxa <- x$taxon[m]
-        taxa[startsWith(taxa, "unclassified_")] <- NA
-        taxa
-}))#Once again, this steps is used to have the taxonomy of the sequences without any innecesary data
-colnames(taxid) <- ranks; rownames(taxid) <- getSequences(seqtab.nochim)#Assigns the name of the row the complete sequence, while the columns are the info that was generated 
-```
-
-
-## Evaluar precisión
-
-
-```{r}
-unqs.mock <- seqtab.nochim["Mock",]#shows the read count of each sequence in this specific file
-unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) # Drop ASVs absent in the Mock, meaning those with no reads
-cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")#this tells us apparently there are 20 strains identified in the mock community
-```
-
-
-
-```{r}
-mock.ref <- getSequences(file.path(path, "HMP_MOCK.v35.fasta"))#extracts sequences from the objects and tells us from the mock sample how many sequences from distinct organisms it got
-match.ref <- sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
-cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")#every match was same as the 20 bacterial reference strains, therefore the residual error is 0%
-
-```
-
 
 ## Convertir a phyloseq
 
@@ -284,64 +269,74 @@ theme_set(theme_bw())#it is just making the theme for every plot that will come 
 
 Construct a data frame from the information n the filenames
 ```{r}
-samples.out <- rownames(seqtab.nochim)#nanmes of the filtered and then merged files
-subject <- sapply(strsplit(samples.out, "D"), `[`, 1)#will cut the name if a "D" is present
-gender <- substr(subject,1,1)#extracts a character, since it is the first one, it seems as if it was from genders "F" and "M"
-subject <- substr(subject,2,999)#will extact all the characters except the first one of all the names, so it gives a number for each file, except the mock
-kk<-sapply(strsplit(samples.out, "D"), `[`, 2)
-day <- as.integer(sapply(strsplit(kk, "_F"), `[`, 1))#makes a split in the letter D, then only takes the second part of the split and then takes it as integer
-samdf <- data.frame(Subject=subject, Gender=gender, Day=day)#makes a data frame from the data
-samdf$When <- "Early"#creates another column
-samdf$When[samdf$Day>100] <- "Late"#doesn't really apply, don't know when it woul be higher than 100
-rownames(samdf) <- samples.out#just renames to the file names
+samples.out<-rownames(seqtab.nochim)
+subject <- sapply(strsplit(samples.out, "_"), `[`, 1)
+subject <- as.numeric(subject)
+samdf<-data.frame(Subject=subject)
+samdf$Origin<-"Seeds"
+samdf$Origin[samdf$Subject==(5:8)]<-"Endophytes"
+samdf$Origin[samdf$Subject==(9:12)]<-"Epiphytes"
+samdf$Origin[samdf$Subject==(13:16)]<-"Intestines"
+samdf$Origin[samdf$Subject==(17:20)]<-"Frass"
+samdf$Origin[samdf$Subject==(20)]<-"Frass"
+samdf$Origin[samdf$Subject==(21)]<-"Eggs"
+samdf$Origin[samdf$Subject==(22)]<-"Eggs"
+samdf$Origin[samdf$Subject==(23)]<-"Eggs"
+samdf$Origin[samdf$Subject==(24)]<-"Eggs"
+samdf$Origin[samdf$Subject==(25)]<-"IDK"
+rownames(samdf)<-samples.out
+subjects <- sapply(strsplit(samples.out, "F"), `[`, 1)
+samdf$Subjects<-subjects
+samdf
 ```
 
 
 
 ```{r}
-ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), #this will generate a phlyoseq object from an otu table made from the non-chimeric files
+ps3 <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), #this will generate a phlyoseq object from an otu table made from the non-chimeric files
                sample_data(samdf), #access the sample data, in this case, the data frame we created just recently
-               tax_table(taxa))#recommended way to construct a table with taxonomic names
-ps <- prune_samples(sample_names(ps) != "Mock_F_filt.fastq.gz", ps) # Remove mock sample
+               tax_table(taxa_out3))#recommended way to construct a table with taxonomic names
+ps3 <- prune_samples(sample_names(ps3) != "25_F_filt.fastq.gz", ps3) # Remove mock sample
 ```
 
 
 
 ```{r}
-dna <- Biostrings::DNAStringSet(taxa_names(ps))#will take the sequence as the taxa names, and then will take thos sequences as dna strings so we don't lose info
-names(dna) <- taxa_names(ps)#the names are the sequences
-ps <- merge_phyloseq(ps, dna)#i guess it will merge the objects we created into one with the all the information
-taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))#assigned ASV and simply numbered, those are the new taxa names
-ps
+dna <- Biostrings::DNAStringSet(taxa_names(ps3))#will take the sequence as the taxa names, and then will take thos sequences as dna strings so we don't lose info
+names(dna) <- taxa_names(ps3)#the names are the sequences
+ps3 <- merge_phyloseq(ps3, dna)#i guess it will merge the objects we created into one with the all the information
+taxa_names(ps3) <- paste0("ASV", seq(ntaxa(ps3)))#assigned ASV and simply numbered, those are the new taxa names
+ps3
 ```
 
 # Al fin deiversidad
 
 ```{r}
-plot_richness(ps, x="Day", color="When") #plots the alpha diversity, it estimates with different indexes the diversity
+plot_richness(ps3, x="Origin", color="Subjects") #plots the alpha diversity, it estimates with different indexes the diversity
 
 ```
-
-
-# Algunas medidas de reducción de la dimensionalidad
-
-```{r}
-# Transform data to proportions as appropriate for Bray-Curtis distances
-ps.prop <- transform_sample_counts(ps, function(otu) otu/sum(otu))#transforms the sample counts of a taxa abundance matrix according to a user-provided function
-ord.nmds.bray <- ordinate(ps.prop, method="NMDS", distance="bray")#Didn't really get it
-```
-
-```{r}
-plot_ordination(ps.prop, ord.nmds.bray, color="When", title="Bray NMDS")
-```
-
 
 # Gráficos de barras apiladas de abundancias
 
 ```{r}
-top20 <- names(sort(taxa_sums(ps), decreasing=TRUE))[1:20]
-ps.top20 <- transform_sample_counts(ps, function(OTU) OTU/sum(OTU))
+top20 <- names(sort(taxa_sums(ps3), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps3, function(OTU) OTU/sum(OTU))
 ps.top20 <- prune_taxa(top20, ps.top20)
-plot_bar(ps.top20, x="Day", fill="Family") + facet_wrap(~When, scales="free_x")
+plot_bar(ps.top20, x="Subjects", fill="Family") + facet_wrap(~Subjects, scales="free_x")
+```
+
+```{r}
+#Phyloseq objects created & saved
+
+#save(ps1, file="~/R/Corroborar_Roberto_1/ps1.RData")
+#save(ps2, file="~/R/Corroborar_Roberto_1/ps2.RData")
+save(ps3, file="~/R/Corroborar_Roberto_1/ps3.RData")
+#save(ps4, file="~/R/Corroborar_Roberto_1/ps4.RData")
+#save(ps5, file="~/R/Corroborar_Roberto_1/ps5.RData")
+#save(ps6, file="~/R/Corroborar_Roberto_1/ps6.RData")
+
+
+
+#load("~/R/Corroborar_Roberto_1/ps1.RData")
 ```
 
