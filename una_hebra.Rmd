@@ -1,0 +1,231 @@
+---
+title: "solo una hebra"
+author: "Jorge Gómez"
+date: "8/25/2021"
+output: html_document
+---
+```{r message=FALSE, warning=FALSE}
+library(dada2)#load the necessary library
+```
+
+Now, we define the path in order to get the FASTQ files we already have, since we'll be using all of them.
+```{r}
+path <- "~/R/Corroborar_Roberto_1/Copia de secuencias_Z/" # CHANGE ME to the directory containing the fastq files after unzipping.
+list.files(path)
+#shows the archives and files in the path that was just previously defined
+```
+Next, the we will separate the files based on wether they're the forward or the reverse strand. In this particular case, the forward strands will be those assigned with *R1* within their name, meanwhile, the reverse strands will be those with *R2* instead. 
+```{r}
+# Forward and reverse fastq filenames have format: SAMPLENAME_R1_001.fastq and SAMPLENAME_R2_001.fastq
+fnFs <- sort(list.files(path, pattern="_R1_001.fastq", full.names = TRUE))
+#In this step we are assigning the files either to the forward or the reverse so that they are separated
+#MUST WRITE THE FULL PATH
+# Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
+sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
+
+```
+## Calidad phred
+In this part, the function *plotQualityProfile* will plot the qualities that were assigned in the FASTQ files, so we'll have a visual representation of the quality and where we would want the trimming to be done.
+```{r}
+plotQualityProfile(fnFs[1:2])
+```
+
+## Filtrado y trimming
+The following part will be used for the filtering and the trimming of the files, since we won't be using the sequences which quality is below a certain threshhold.
+```{r}
+# Place filtered files in filtered/ subdirectory
+filtFs <- file.path(path, "filtered.1", paste0(sample.names, "_F_filt.fastq.gz"))#criteria for the outing
+#the filtered files will be within the file called 'filtered', they are once again separated between the forward and reverse strands
+names(filtFs) <- sample.names
+#we are just assingning the names of the files, may look like they arte the same, but it's because it is the first part of the name, nbot whole
+```
+
+
+
+```{r}
+out <- filterAndTrim(fnFs, filtFs, truncLen=165, #first is the path of the forward fastq file, 
+                                                                      #then the path for the filtered filed; then same but with reverse strand
+                                                   #the argument trunclen sets a threshold for the length of each of the strains' reads length
+              maxN=0, maxEE=2, truncQ=2, rm.phix=TRUE, #maxN: after being truncated, any sequences with a higher Ns than what it is stated
+                                                            #won't be used
+                                                            #maxEE: after truncation, reads with higher than maxEE "expected errors" will be discarded
+                                                            #truncQ: Truncate reads at the first instance of a quality 
+                                                            #score less than or equal to truncQ.
+                                                            #rm.phix:  discard reads that match against the phiX genome, as determined by isPhiX if T
+              compress=TRUE, multithread=F) # On Windows set multithread=FALSE
+                                            #compress: the output fastq file(s) are gzipped if it is True
+#the output of the function above has an output of fastq file(s) (compressed by default) containing those trimmed reads which passed the filters
+#CHECK THE DOCUMENTATION 
+
+#have to make changes every time you make a new trim
+
+#out1<-the trims are on the 155
+#out2<-the trims are on the 175
+#out3<-the trims are on the 185
+#out4<-the trims are on the 165
+
+
+
+```
+
+## Filtrado y tasas de error
+Will use the filtered files, meaning those that have already been cut in order for us to be content with the quality and are good enough for our work.
+```{r}
+errF <- learnErrors(filtFs, multithread=TRUE) 
+#more or less will estimate via machine laerning what would be expected and the observed data, compares and calculates the error
+#Error rates are learned by alternating between sample inference and error rate estimation until convergence
+#output of this function serves as input to the dada function call as the err parameter.
+
+```
+
+## Inferencia de la muestra
+
+
+
+```{r}
+dadaFs <- dada(filtFs, err=errF, multithread=TRUE)
+#this function will remove sequencing errors, that is why we calculated the error, and will reveal the composition of the community
+
+```
+
+
+```{r}
+seqtab.nochim <- makeSequenceTable(dadaFs)#This function constructs a sequence table (analogous to an OTU table) from the provided list of samples.
+dim(seqtab)
+```
+
+```{r}
+getN <- function(x) sum(getUniques(x))#i gues this line will get the unique seuqences, meaning vectors from the objects, meaning the sequences.
+
+track <- cbind(out, sapply(dadaFs, getN), rowSums(seqtab.nochim))#this should get us the reads and the unique sequences we had at the beginning and at each step; since it looks like it hasn't dropped o much, it is fine
+# If processing a single sample, remove the sapply calls: e.g. replace sapply(dadaFs, getN) with getN(dadaFs)
+
+colnames(track) <- c("input", "filtered", "denoisedF","nonchim")
+rownames(track) <- sample.names
+head(track)
+```
+
+
+## Asignar taxonomía
+
+Hay que descragar las bases de datos más actualizada acá en la siguiente liga (Taxonomic reference data)[https://benjjneb.github.io/dada2/training.html] . Los archivos que descargan son dos: silva_nr_v132_train_set.fa.gz y 
+
+Estos dos procesos pueden tardar mucho, cuidado
+
+
+```{r}
+taxa_out <- assignTaxonomy(seqtab.nochim,"~/R/Corroborar_Roberto_1/tax/silva_nr_v132_train_set.fa.gz", multithread=T) #it could be done, and tried to load it, but it just wouldn't find the file even though files from thesame file had been loaded in the same fashion
+#apparently, this function starts assigning the taxonomy to to the sequence variants given the amplicon used and a series of training sequences with known taxonomy so that it may assign correctly the sequences that we gave
+
+
+```
+
+
+```{r}
+taxa_out <- addSpecies(taxa_out,"~/R/Corroborar_Roberto_1/tax/silva_species_assignment_v132.fa.gz")
+#this part has the ability to assign the species to each sequence, but only f they are a perfect match and fulfill certain criteria like genera classification and the sort; for more info, check the documentation
+
+
+```
+
+```{r}
+taxa.print <- taxa_out # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL#the names were the full sequences, so not very helpful
+head(taxa.print)#now it says the taxonomy rather than the full sequence and the taxonomy
+```
+
+## Convertir a phyloseq
+
+```{r message=FALSE, warning=FALSE}
+#load more necessary libraries
+library(phyloseq); packageVersion("phyloseq")
+library(Biostrings); packageVersion("Biostrings")
+library(ggplot2); packageVersion("ggplot2")
+```
+
+
+```{r}
+theme_set(theme_bw())#it is just making the theme for every plot that will come to be from this point onwards
+```
+
+Construct a data frame from the information n the filenames
+```{r}
+samples.out<-rownames(seqtab.nochim)
+subject <- sapply(strsplit(samples.out, "_"), `[`, 1)
+subject <- as.numeric(subject)
+samdf<-data.frame(Subject=subject)
+samdf$Origin<-"Seeds"
+samdf$Origin[samdf$Subject==(5:8)]<-"Endophytes"
+samdf$Origin[samdf$Subject==(9:12)]<-"Epiphytes"
+samdf$Origin[samdf$Subject==(13:16)]<-"Intestines"
+samdf$Origin[samdf$Subject==(17:20)]<-"Frass"
+samdf$Origin[samdf$Subject==(20)]<-"Frass"
+samdf$Origin[samdf$Subject==(21)]<-"Eggs"
+samdf$Origin[samdf$Subject==(22)]<-"Eggs"
+samdf$Origin[samdf$Subject==(23)]<-"Eggs"
+samdf$Origin[samdf$Subject==(24)]<-"Eggs"
+samdf$Origin[samdf$Subject==(25)]<-"IDK"
+rownames(samdf)<-samples.out
+subjects <- sapply(strsplit(samples.out, "F"), `[`, 1)
+samdf$Subjects<-subjects
+samdf
+```
+
+```{r}
+ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows=FALSE), #this will generate a phlyoseq object from an otu table made from the non-chimeric files
+               sample_data(samdf), #access the sample data, in this case, the data frame we created just recently
+               tax_table(taxa_out))#recommended way to construct a table with taxonomic names
+ps <- prune_samples(sample_names(ps) != "25", ps) # Remove mock sample
+```
+
+
+
+```{r}
+dna <- Biostrings::DNAStringSet(taxa_names(ps))#will take the sequence as the taxa names, and then will take thos sequences as dna strings so we don't lose info
+names(dna) <- taxa_names(ps)#the names are the sequences
+ps <- merge_phyloseq(ps, dna)#i guess it will merge the objects we created into one with the all the information
+taxa_names(ps) <- paste0("ASV", seq(ntaxa(ps)))#assigned ASV and simply numbered, those are the new taxa names
+ps4<-ps
+```
+
+```{r}
+top20 <- names(sort(taxa_sums(ps1), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps1, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Subjects", fill="Family") + facet_wrap(~Origin, scales="free_x")
+
+top20 <- names(sort(taxa_sums(ps2), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps2, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Subjects", fill="Family") + facet_wrap(~Origin, scales="free_x")
+
+top20 <- names(sort(taxa_sums(ps3), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps3, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Subjects", fill="Family") + facet_wrap(~Origin, scales="free_x")
+
+top20 <- names(sort(taxa_sums(ps4), decreasing=TRUE))[1:20]
+ps.top20 <- transform_sample_counts(ps4, function(OTU) OTU/sum(OTU))
+ps.top20 <- prune_taxa(top20, ps.top20)
+plot_bar(ps.top20, x="Subjects", fill="Family") + facet_wrap(~Origin, scales="free_x")
+```
+
+
+
+```{r}
+#Phyloseq objects created & saved
+
+save(ps1, file="~/R/Corroborar_Roberto_1/ps1_F.RData")
+save(ps2, file="~/R/Corroborar_Roberto_1/ps2_F.RData")
+save(ps3, file="~/R/Corroborar_Roberto_1/ps3_F.RData")
+save(ps4, file="~/R/Corroborar_Roberto_1/ps4_F.RData")
+```
+
+
+
+
+
+
+
+
+
